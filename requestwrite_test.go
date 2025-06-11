@@ -75,7 +75,7 @@ var reqWriteTests = []reqWriteTest{
 			"Host: www.techcrunch.com\r\n" +
 			"Keep-Alive: 300\r\n" +
 			"Proxy-Connection: keep-alive\r\n" +
-			"User-Agent: Fake\r\n\n",
+			"User-Agent: Fake\r\n\r\n",
 	},
 	// HTTP/1.1 => chunked coding; body; empty trailer
 	1: {
@@ -611,7 +611,7 @@ var reqWriteTests = []reqWriteTest{
 	27: { // Custom Content-Length header disregarding the Body
 		Req: Request{
 			Method: "POST",
-			URL: mustParseURL("/"),
+			URL:    mustParseURL("/"),
 			Header: Header{"Content-Length": {"100"}},
 		},
 		WantWrite: "POST / HTTP/1.1\r\n" +
@@ -627,7 +627,7 @@ var reqWriteTests = []reqWriteTest{
 	28: { // POST with body but with no content-length header
 		Req: Request{
 			Method: "POST",
-			URL: mustParseURL("https://www.googl.com/"),
+			URL:    mustParseURL("https://www.googl.com/"),
 			Header: Header{"Content-Length": {ContentLengthDelete}},
 		},
 		Body: []byte("Hello World"),
@@ -640,23 +640,23 @@ var reqWriteTests = []reqWriteTest{
 			"User-Agent: Go-http-client/1.1\r\n\r\n" +
 			"Hello World",
 	},
-	29: {// POST with empty content length header disregarding body
+	29: { // POST with empty content length header disregarding body
 		Req: Request{
 			Method: "POST",
-			URL: mustParseURL("/"),
+			URL:    mustParseURL("/"),
 			Header: Header{"Content-Length": {ContentLengthDelete}},
-			Body: io.NopCloser(strings.NewReader("Hello World")),
+			Body:   io.NopCloser(strings.NewReader("Hello World")),
 		},
 		WantWrite: "POST / HTTP/1.1\r\n" +
 			"Host: www.google.com\r\n" +
-			"Content-Length:\r\n "+
+			"Content-Length:\r\n " +
 			"User-Agent: Go-http-client/1.1\r\n\r\n" +
 			"Hello World",
 		WantProxy: "POST / HTTP/1.1\r\n" +
 			"Host: www.google.com\r\n" +
 			"User-Agent: Go-http-client/1.1\r\n\r\n" +
 			"Hello World",
-		 },
+	},
 }
 
 // TestRequestCustomTransferEncoding shows how to send a POST request with no content-length header

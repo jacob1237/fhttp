@@ -735,42 +735,8 @@ func (t *Transport) newClientConn(c net.Conn, addr string, singleUse bool) (*Cli
 		cc.tlsState = &state
 	}
 
-	initialSettings := []Setting{}
-
-	var pushEnabled uint32
-	if t.PushHandler != nil {
-		pushEnabled = 1
-	}
-	initialSettings = append(initialSettings, Setting{ID: SettingEnablePush, Val: pushEnabled})
-
-	setMaxHeader := false
-	if t.Settings != nil {
-		for _, setting := range t.Settings {
-			if setting.ID == SettingMaxHeaderListSize {
-				setMaxHeader = true
-			}
-			if setting.ID == SettingHeaderTableSize || setting.ID == SettingInitialWindowSize {
-				return nil, errSettingsIncludeIllegalSettings
-			}
-			initialSettings = append(initialSettings, setting)
-		}
-	}
-	if t.InitialWindowSize != 0 {
-		initialSettings = append(initialSettings, Setting{ID: SettingInitialWindowSize, Val: t.InitialWindowSize})
-	} else {
-		initialSettings = append(initialSettings, Setting{ID: SettingInitialWindowSize, Val: transportDefaultStreamFlow})
-	}
-	if t.HeaderTableSize != 0 {
-		initialSettings = append(initialSettings, Setting{ID: SettingHeaderTableSize, Val: t.HeaderTableSize})
-	} else {
-		initialSettings = append(initialSettings, Setting{ID: SettingHeaderTableSize, Val: initialHeaderTableSize})
-	}
-	if max := t.maxHeaderListSize(); max != 0 && !setMaxHeader {
-		initialSettings = append(initialSettings, Setting{ID: SettingMaxHeaderListSize, Val: max})
-	}
-
 	cc.bw.Write(clientPreface)
-	cc.fr.WriteSettings(initialSettings...)
+	cc.fr.WriteSettings(t.getInitialSettings()...)
 	cc.fr.WriteWindowUpdate(0, transportDefaultConnFlow)
 	cc.inflow.add(transportDefaultConnFlow + initialWindowSize)
 	cc.bw.Flush()
@@ -781,6 +747,67 @@ func (t *Transport) newClientConn(c net.Conn, addr string, singleUse bool) (*Cli
 
 	go cc.readLoop()
 	return cc, nil
+}
+
+func (t *Transport) getInitialSettings() []Setting {
+	needPushSetting := true
+	needInitialWindowSize := true
+	needHeaderTableSize := true
+	needMaxHeaderListSize := true
+
+	settings := []Setting{}
+
+	if t.Settings != nil {
+		for _, setting := range t.Settings {
+			switch setting.ID {
+			case SettingEnablePush:
+				needPushSetting = false
+			case SettingInitialWindowSize:
+				needInitialWindowSize = false
+			case SettingHeaderTableSize:
+				needHeaderTableSize = false
+			case SettingMaxHeaderListSize:
+				needMaxHeaderListSize = false
+			}
+
+			settings = append(settings, setting)
+		}
+	}
+
+	if needPushSetting {
+		var value uint32 = 0
+		if t.PushHandler != nil {
+			value = 1
+		}
+
+		settings = append(settings, Setting{ID: SettingEnablePush, Val: value})
+	}
+
+	if needInitialWindowSize {
+		var value uint32 = transportDefaultStreamFlow
+		if t.InitialWindowSize != 0 {
+			value = t.InitialWindowSize
+		}
+
+		settings = append(settings, Setting{ID: SettingInitialWindowSize, Val: value})
+	}
+
+	if needHeaderTableSize {
+		var value uint32 = initialHeaderTableSize
+		if t.HeaderTableSize != 0 {
+			value = t.HeaderTableSize
+		}
+
+		settings = append(settings, Setting{ID: SettingHeaderTableSize, Val: value})
+	}
+
+	if needMaxHeaderListSize {
+		if value := t.maxHeaderListSize(); value != 0 {
+			settings = append(settings, Setting{ID: SettingMaxHeaderListSize, Val: value})
+		}
+	}
+
+	return settings
 }
 
 func (cc *ClientConn) healthCheck() {

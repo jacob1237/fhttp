@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
-	"github.com/useflyent/fhttp/cookiejar"
-	"github.com/useflyent/fhttp/httptest"
-	"golang.org/x/net/publicsuffix"
 	"log"
 	ghttp "net/http"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/useflyent/fhttp/cookiejar"
+	"github.com/useflyent/fhttp/httptest"
+	"golang.org/x/net/publicsuffix"
 
 	http "github.com/useflyent/fhttp"
 	"github.com/useflyent/fhttp/http2"
@@ -72,28 +72,37 @@ func TestConnectionSettings(t *testing.T) {
 
 func compareSettings(ID http2.SettingID, output uint32, expected uint32) error {
 	if output != expected {
-		return errors.New(fmt.Sprintf("Setting %v, expected %d got %d", ID, expected, output))
+		return fmt.Errorf("Setting %v, expected %d got %d", ID, expected, output)
 	}
 	return nil
 }
 
 // Round trip test, makes sure that the changes made doesn't break the library
 func TestRoundTrip(t *testing.T) {
-	settings := []http2.Setting{
-		{ID: http2.SettingHeaderTableSize, Val: 65536},
-		{ID: http2.SettingMaxConcurrentStreams, Val: 1000},
-		{ID: http2.SettingInitialWindowSize, Val: 6291456},
-		{ID: http2.SettingMaxFrameSize, Val: 16384},
-		{ID: http2.SettingMaxHeaderListSize, Val: 262144},
-	}
 	tr := http2.Transport{
-		Settings: settings,
+		HeaderTableSize:   65536,
+		InitialWindowSize: 6291456,
+		MaxHeaderListSize: 262144,
+		Settings: []http2.Setting{
+			{ID: http2.SettingHeaderTableSize, Val: 65536},
+			{ID: http2.SettingMaxConcurrentStreams, Val: 1000},
+			{ID: http2.SettingInitialWindowSize, Val: 6291456},
+			{ID: http2.SettingMaxFrameSize, Val: 16384},
+			{ID: http2.SettingMaxHeaderListSize, Val: 262144},
+		},
 	}
-	req, err := http.NewRequest("GET", "www.google.com", nil)
+
+	req, err := http.NewRequest("GET", "https://www.google.com", nil)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
-	tr.RoundTrip(req)
+
+	resp, err := tr.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	defer resp.Body.Close()
 }
 
 // Tests if content-length header is present in request headers during POST
@@ -120,13 +129,13 @@ func TestContentLength(t *testing.T) {
 	form.Add("Hello", "World")
 	req, err := http.NewRequest("POST", u, strings.NewReader(form.Encode()))
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	req.Header.Add("user-agent", "Go Testing")
 
 	resp, err := ts.Client().Do(req)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer resp.Body.Close()
 }
@@ -136,7 +145,7 @@ func TestClient_SendsCookies(t *testing.T) {
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("cookie")
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		if cookie.Value == "" {
 			t.Fatalf("Cookie value is empty")
@@ -150,19 +159,19 @@ func TestClient_SendsCookies(t *testing.T) {
 		PublicSuffixList: publicsuffix.List,
 	})
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	c.Jar = jar
 	ur := ts.URL
 	u, err := url.Parse(ur)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	cookies := []*http.Cookie{{Name: "cookie", Value: "Hello world"}}
 	jar.SetCookies(u, cookies)
 	resp, err := c.Get(ur)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	defer resp.Body.Close()
 }
@@ -171,12 +180,12 @@ func TestClient_SendsCookies(t *testing.T) {
 func TestClient_Load(t *testing.T) {
 	u, err := url.Parse("http://localhost:8888")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	pool, err := getCharlesCert()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	c := http.Client{
 		Transport: &http.Transport{
@@ -189,12 +198,12 @@ func TestClient_Load(t *testing.T) {
 	}
 	req, err := http.NewRequest("GET", "https://golang.org/pkg/net/mail/#Address", nil)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	for i := 0; i < 10; i++ {
 		resp, err := c.Do(req)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 		resp.Body.Close()
 	}
@@ -203,12 +212,12 @@ func TestClient_Load(t *testing.T) {
 func TestGClient_Load(t *testing.T) {
 	u, err := url.Parse("http://localhost:8888")
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 
 	pool, err := getCharlesCert()
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	c := ghttp.Client{
 		Transport: &ghttp.Transport{
@@ -221,12 +230,12 @@ func TestGClient_Load(t *testing.T) {
 	}
 	req, err := ghttp.NewRequest("GET", "https://golang.org/pkg/net/mail/#Address", nil)
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatal(err.Error())
 	}
 	for i := 0; i < 10; i++ {
 		err := do(&c, req)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err.Error())
 		}
 	}
 }
