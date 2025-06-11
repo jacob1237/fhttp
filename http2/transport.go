@@ -761,7 +761,6 @@ func (t *Transport) newClientConn(c net.Conn, addr string, singleUse bool) (*Cli
 }
 
 func (t *Transport) getInitialSettings() []Setting {
-	needPushSetting := true
 	needInitialWindowSize := true
 
 	settings := []Setting{}
@@ -769,23 +768,12 @@ func (t *Transport) getInitialSettings() []Setting {
 	if t.Settings != nil {
 		for _, setting := range t.Settings {
 			switch setting.ID {
-			case SettingEnablePush:
-				needPushSetting = false
 			case SettingInitialWindowSize:
 				needInitialWindowSize = false
 			}
 
 			settings = append(settings, setting)
 		}
-	}
-
-	if needPushSetting {
-		var value uint32 = 0
-		if t.PushHandler != nil {
-			value = 1
-		}
-
-		settings = append(settings, Setting{ID: SettingEnablePush, Val: value})
 	}
 
 	if needInitialWindowSize {
