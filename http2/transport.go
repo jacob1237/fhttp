@@ -752,8 +752,6 @@ func (t *Transport) newClientConn(c net.Conn, addr string, singleUse bool) (*Cli
 func (t *Transport) getInitialSettings() []Setting {
 	needPushSetting := true
 	needInitialWindowSize := true
-	needHeaderTableSize := true
-	needMaxHeaderListSize := true
 
 	settings := []Setting{}
 
@@ -764,10 +762,6 @@ func (t *Transport) getInitialSettings() []Setting {
 				needPushSetting = false
 			case SettingInitialWindowSize:
 				needInitialWindowSize = false
-			case SettingHeaderTableSize:
-				needHeaderTableSize = false
-			case SettingMaxHeaderListSize:
-				needMaxHeaderListSize = false
 			}
 
 			settings = append(settings, setting)
@@ -790,21 +784,6 @@ func (t *Transport) getInitialSettings() []Setting {
 		}
 
 		settings = append(settings, Setting{ID: SettingInitialWindowSize, Val: value})
-	}
-
-	if needHeaderTableSize {
-		var value uint32 = initialHeaderTableSize
-		if t.HeaderTableSize != 0 {
-			value = t.HeaderTableSize
-		}
-
-		settings = append(settings, Setting{ID: SettingHeaderTableSize, Val: value})
-	}
-
-	if needMaxHeaderListSize {
-		if value := t.maxHeaderListSize(); value != 0 {
-			settings = append(settings, Setting{ID: SettingMaxHeaderListSize, Val: value})
-		}
 	}
 
 	return settings
