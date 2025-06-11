@@ -147,6 +147,9 @@ type Transport struct {
 	Settings          []Setting
 	InitialWindowSize uint32 // if nil, will use global initialWindowSize
 	HeaderTableSize   uint32 // if nil, will use global initialHeaderTableSize
+
+	// Customize the initial WINDOW_UPDATE frame
+	InitialWindowUpdateIncrement uint32
 }
 
 func (t *Transport) maxHeaderListSize() uint32 {
@@ -737,8 +740,16 @@ func (t *Transport) newClientConn(c net.Conn, addr string, singleUse bool) (*Cli
 
 	cc.bw.Write(clientPreface)
 	cc.fr.WriteSettings(t.getInitialSettings()...)
-	cc.fr.WriteWindowUpdate(0, transportDefaultConnFlow)
-	cc.inflow.add(transportDefaultConnFlow + initialWindowSize)
+
+	incr := t.InitialWindowUpdateIncrement
+	if incr == 0 {
+		incr = transportDefaultConnFlow
+	}
+
+	flowSize := incr + t.InitialWindowSize
+
+	cc.fr.WriteWindowUpdate(0, incr)
+	cc.inflow.add(int32(flowSize))
 	cc.bw.Flush()
 	if cc.werr != nil {
 		cc.Close()
