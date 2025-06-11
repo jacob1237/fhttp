@@ -12,12 +12,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/useflyent/fhttp/cookiejar"
-	"github.com/useflyent/fhttp/httptest"
+	"github.com/jacob1237/fhttp/cookiejar"
+	"github.com/jacob1237/fhttp/httptest"
 	"golang.org/x/net/publicsuffix"
 
-	http "github.com/useflyent/fhttp"
-	"github.com/useflyent/fhttp/http2"
+	http "github.com/jacob1237/fhttp"
+	"github.com/jacob1237/fhttp/http2"
 )
 
 // Tests if connection settings are written correctly

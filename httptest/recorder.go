@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	http "github.com/useflyent/fhttp"
+	http "github.com/jacob1237/fhttp"
 
 	"golang.org/x/net/http/httpguts"
 )
